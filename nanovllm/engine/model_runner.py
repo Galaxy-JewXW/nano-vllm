@@ -17,6 +17,7 @@ class ModelRunner:
     def __init__(self, config: Config, rank: int, event: Event | list[Event]):
         self.config = config
         hf_config = config.hf_config
+        self.model_dtype = self.resolve_model_dtype(hf_config)
         self.block_size = config.kvcache_block_size
         self.enforce_eager = config.enforce_eager
         self.world_size = config.tensor_parallel_size
@@ -28,7 +29,7 @@ class ModelRunner:
         )
         torch.cuda.set_device(rank)
         default_dtype = torch.get_default_dtype()
-        torch.set_default_dtype(hf_config.torch_dtype)
+        torch.set_default_dtype(self.model_dtype)
         torch.set_default_device("cuda")
         self.model = Qwen3ForCausalLM(hf_config)
         load_model(self.model, config.model)
@@ -59,6 +60,17 @@ class ModelRunner:
             del self.graphs, self.graph_pool
         torch.cuda.synchronize()
         dist.destroy_process_group()
+
+    @staticmethod
+    def resolve_model_dtype(hf_config):
+        dtype = getattr(hf_config, "dtype", None)
+        if dtype is None:
+            dtype = getattr(hf_config, "torch_dtype", None)
+        if isinstance(dtype, str):
+            dtype = getattr(torch, dtype)
+        if not isinstance(dtype, torch.dtype):
+            raise ValueError(f"Unsupported model dtype: {dtype}")
+        return dtype
 
     def loop(self):
         while True:
@@ -123,7 +135,7 @@ class ModelRunner:
             * self.block_size
             * num_kv_heads
             * head_dim
-            * hf_config.torch_dtype.itemsize
+            * self.model_dtype.itemsize
         )
         config.num_kvcache_blocks = (
             int(total * config.gpu_memory_utilization - used - peak + current)

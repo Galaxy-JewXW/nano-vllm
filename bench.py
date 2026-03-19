@@ -12,7 +12,7 @@ def main():
     max_input_len = 1024
     max_ouput_len = 1024
 
-    path = "/data/Model/Qwen3-0.6B"
+    path = "/data/Models/Qwen3-0.6B"
     llm = LLM(path, enforce_eager=False, max_model_len=4096)
 
     prompt_token_ids = [
