@@ -43,6 +43,10 @@ outputs = llm.generate(prompts, sampling_params)
 outputs[0]["text"]
 ```
 
+## Documentation
+
+- [Architecture Guide (Chinese)](docs/architecture.zh-CN.md)
+
 ## Benchmark
 
 See `bench.py` for benchmark.
